@@ -5,7 +5,7 @@ package parser;
 * Die Klasse OSMTileClusteringDemo kategorisiert einen beliebigen OSM-Datensatz
 * in N Cluster ein die dann jeweils wiederum n-Quadranten der Länge nxn (meter) besitzen,
 * z.B. 1 km x 1 km, außerdem wird jeder Cluster repräsentiert über Farbe und seine Top 3 Attribute.
-* Die Ergebnisse werden im GeoJson-Format exportiert für die Verwendung in visualisierung,
+* Die Ergebnisse werden im GeoJson-Format exportiert für die Verwendung in Visualisierungen,
 * z.B. die Projektion auf die Ursprungskarte
 *
 *
