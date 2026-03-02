@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>TileMap Viewer + Cluster Visualization</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { width: 100%; height: 80vh; margin-top: 10px; }
+        body { font-family: Arial, sans-serif; margin: 10px; }
+        select { padding: 5px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<h2>TileMap Viewer + Cluster Visualization</h2>
+
+<input type="file" id="geojsonFiles" multiple accept=".geojson" />
+<select id="fileSelect">
+    <option value="">Bitte Datei wählen</option>
+</select>
+
+<div id="map"></div>
+
+<script>
+    const map = L.map('map').setView([53.5, 10.0], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let geoJsonLayer;
+    let currentGeoJson;
+    let activeClusterFilter = null;
+
+    const fileInput = document.getElementById('geojsonFiles');
+    const fileSelect = document.getElementById('fileSelect');
+    const geojsonData = {};
+
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                geojsonData[file.name] = JSON.parse(ev.target.result);
+                const option = document.createElement('option');
+                option.value = file.name;
+                option.text = file.name;
+                fileSelect.appendChild(option);
+            };
+            reader.readAsText(file);
+        });
+    });
+
+    fileSelect.addEventListener('change', () => {
+        const selected = fileSelect.value;
+        if (!selected) return;
+
+        currentGeoJson = geojsonData[selected];
+        activeClusterFilter = null;
+
+        renderGeoJson();
+    });
+
+    function renderGeoJson() {
+        if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+
+        geoJsonLayer = L.geoJSON(currentGeoJson, {
+            filter: feature => {
+                if (activeClusterFilter === null) return true;
+                return feature.properties.cluster === activeClusterFilter;
+            },
+            style: feature => ({
+                color: feature.properties.color || '#3388ff',
+                weight: 1,
+                fillOpacity: 0.5
+            }),
+            onEachFeature: (feature, layer) => {
+                const clusterId = feature.properties.cluster;
+                const label = feature.properties.label || "";
+
+                //POPUP mit Informationen zu dem Tile + Single-Cluster-Auswahl
+                const popupHtml = `
+                    <b>${feature.properties.name || "Tile"}</b><br>
+                    <b>Cluster:</b> ${clusterId}<br>
+                    ${label}<br><br>
+                    <label>
+                        <input type="checkbox"
+                               ${activeClusterFilter === clusterId ? "checked" : ""}
+                               onchange="toggleClusterFilter(${clusterId}, this.checked)">
+                        Nur diesen Cluster anzeigen
+                    </label>
+                `;
+
+                layer.bindPopup(popupHtml);
+            }
+        }).addTo(map);
+
+        if (geoJsonLayer.getBounds().isValid()) {
+            map.fitBounds(geoJsonLayer.getBounds());
+        }
+    }
+
+    function toggleClusterFilter(clusterId, enabled) {
+        activeClusterFilter = enabled ? clusterId : null;
+        renderGeoJson();
+    }
+</script>
+
+</body>
+</html>
